@@ -27,26 +27,59 @@ export interface BuildAppOptions {
  * arquivo que faz as duas coisas é o motivo mais comum de "não dá para testar
  * isso".
  */
+/**
+ * Opções de log do Fastify.
+ *
+ * Separado do `buildApp` porque o transporte bonito pode falhar ao carregar, e
+ * aí é preciso montar a aplicação de novo com o log simples.
+ */
+function loggerOptions(options: BuildAppOptions) {
+  if (options.logger === false) return false
+
+  if (env.NODE_ENV === 'production') return { level: env.LOG_LEVEL }
+
+  return {
+    level: env.LOG_LEVEL,
+    // pino-pretty só em desenvolvimento: ele abre uma thread extra, o que é
+    // desperdício (e às vezes problema) em serverless.
+    transport: {
+      target: 'pino-pretty',
+      options: { translateTime: 'HH:MM:ss.l', ignore: 'pid,hostname' },
+    },
+  }
+}
+
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
-  const app = Fastify({
-    logger:
-      options.logger === false
-        ? false
-        : env.NODE_ENV === 'production'
-          ? { level: env.LOG_LEVEL }
-          : {
-              level: env.LOG_LEVEL,
-              // pino-pretty só em desenvolvimento: ele abre uma thread extra,
-              // o que é desperdício (e às vezes problema) em serverless.
-              transport: {
-                target: 'pino-pretty',
-                options: { translateTime: 'HH:MM:ss.l', ignore: 'pid,hostname' },
-              },
-            },
-    // Necessário atrás de proxy (Vercel, Cloudflare). Sem isso, o Fastify
-    // enxerga o IP do proxy em vez do IP do leitor.
-    trustProxy: true,
-  })
+  // Necessário atrás de proxy (Vercel, Cloudflare). Sem isso, o Fastify enxerga
+  // o IP do proxy em vez do IP do leitor.
+  const trustProxy = true
+
+  let app: FastifyInstance
+
+  try {
+    app = Fastify({ logger: loggerOptions(options), trustProxy })
+  } catch (error) {
+    /**
+     * O transporte de log não pôde ser carregado.
+     *
+     * O caso conhecido é o `pino-pretty`: o `pino` resolve o NOME do transporte
+     * em tempo de execução, e num código empacotado isso pode não existir. Já
+     * custou uma sessão de depuração inteira — a API toda fora do ar, e a
+     * mensagem "unable to determine transport target for pino-pretty" enterrada
+     * num log de servidor.
+     *
+     * Log colorido é conveniência. Derrubar a API por causa dele, não.
+     */
+    if (options.logger === false) throw error
+
+    console.warn(
+      `[bff] transporte de log indisponível, seguindo com log simples: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    )
+
+    app = Fastify({ logger: { level: env.LOG_LEVEL }, trustProxy })
+  }
 
   /**
    * Leitura e escrita de cookies. Necessário para a sessão do painel.

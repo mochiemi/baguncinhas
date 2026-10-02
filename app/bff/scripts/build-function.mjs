@@ -20,20 +20,24 @@
  * resolução de módulo em tempo de execução.
  *
  * ---------------------------------------------------------------------------
- * AS DEPENDÊNCIAS DE VERDADE FICAM DE FORA, DE PROPÓSITO
+ * POR QUE TUDO É EMPACOTADO, INCLUSIVE AS DEPENDÊNCIAS
  * ---------------------------------------------------------------------------
- * `packages: 'external'` mantém `fastify`, `zod` e `sanitize-html` como imports
- * normais, resolvidos do `node_modules` que o Vercel instala. Elas são rastreadas
- * sem problema; empacotá-las só engordaria o arquivo sem resolver nada.
+ * A primeira versão deixava as dependências de fora (`packages: 'external'`),
+ * que é o padrão em projetos Node. Não serviu aqui: o Vercel publicou a função e
+ * ela morreu com `FUNCTION_INVOCATION_FAILED`, antes de qualquer código nosso
+ * rodar. O indício é que os `import` de `zod`, `fastify` e afins ficavam
+ * espalhados no meio do arquivo gerado, e não no topo.
  *
- * Mas isso cria uma armadilha: `external` trata QUALQUER nome sem barra como
- * pacote de npm, e o `@mochiblog/shared` também tem nome sem barra. Medido antes
- * de escolher: sem o `alias` abaixo, a linha `from "@mochiblog/shared"` continuava
- * no arquivo final e o problema permanecia. Com o alias, ela desaparece.
+ * Empacotando TUDO, sobram apenas imports de `node:crypto`, que é embutido do
+ * próprio Node. Não existe mais nada para resolver em tempo de execução, então
+ * a classe inteira de problema "não achou o módulo" deixa de existir.
  *
- * A alternativa seria listar cada dependência em `--external`, o que vira uma
- * lista para esquecer de atualizar a cada dependência nova. O alias é uma linha
- * que resolve exatamente o caso que precisa.
+ * O preço é o tamanho: cerca de 2 MB. Irrelevante para o limite do Vercel.
+ *
+ * ⚠️ Empacotar tem uma armadilha que vale conhecer: o `pino` resolve o NOME do
+ * transporte de log em tempo de execução, e um bundle não tem como garantir
+ * isso. Por isso o `buildApp` cai num log simples se o transporte falhar —
+ * empacotamento não pode derrubar a API por causa de log colorido.
  *
  * ---------------------------------------------------------------------------
  * O ARQUIVO GERADO NÃO VAI PARA O GIT
@@ -61,7 +65,6 @@ await build({
   platform: 'node',
   format: 'esm',
   target: 'node22',
-  packages: 'external',
   alias: {
     '@mochiblog/shared': resolve(repoRoot, 'packages/shared/src/index.ts'),
   },
