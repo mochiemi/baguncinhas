@@ -38,6 +38,9 @@ importers:
       '@types/sanitize-html':
         specifier: ^2.13.0
         version: 2.16.2
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
       pino-pretty:
         specifier: ^13.0.0
         version: 13.1.3

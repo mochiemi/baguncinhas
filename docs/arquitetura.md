@@ -261,10 +261,35 @@ de contrato que você não precisa escrever.
 O pacote exporta TypeScript direto, sem etapa de build. É o padrão de "pacote
 interno" em monorepo: menos uma etapa para esquecer de rodar.
 
-**Se um dia o build do Vercel reclamar** de não conseguir resolver o `.ts` do
-pacote compartilhado, as saídas são: adicionar um `tsup`/`tsc` gerando `dist`, ou
-manter a exportação como está e configurar `transpile` no bundler. O erro, se
-aparecer, aparece no deploy e não no desenvolvimento.
+**Isto já cobrou o seu preço, e vale saber como.** No primeiro deploy, o Vercel
+recusou a função com `Cannot find module '.../@mochiblog/shared/src/index.ts'`.
+Foram duas causas somadas:
+
+1. O Vercel empacota a função a partir dos arquivos que consegue alcançar dentro
+   da Root Directory do projeto (`app/bff`). O pacote mora em `packages/shared`,
+   fora dela, então o arquivo não entrou no pacote.
+2. Mesmo se tivesse entrado, é `.ts`, e o Node não carrega `.ts`.
+
+O sintoma não ajudava: 500 em toda rota, inclusive numa que não existe, com corpo
+vazio. A explicação só aparecia no log da função.
+
+A saída foi empacotar o adaptador do Vercel com esbuild
+(`app/bff/scripts/build-function.mjs`), inlinando o pacote compartilhado. O
+arquivo `api/[...path].js` é gerado a cada build e **não** vai para o Git, para
+não existir a hipótese de alguém publicar um pacote velho por esquecer de
+reconstruir.
+
+O detalhe que faz funcionar é o `alias` no empacotamento: com
+`packages: 'external'`, QUALQUER nome sem barra é tratado como pacote de npm, e o
+`@mochiblog/shared` também tem nome sem barra. Medido antes de escolher: sem o
+alias, a linha `from "@mochiblog/shared"` continuava no arquivo final.
+
+A decisão de não ter etapa de build no `packages/shared` continua valendo para o
+desenvolvimento e para o front, que só importa tipos. Quem paga o preço é o único
+consumidor de tempo de execução, e paga uma vez, num arquivo gerado.
+
+**Verificado:** com Node puro, sem transpilador nenhum, a função gerada serve
+`/api/health` com HTTP 200. É o formato que o Vercel executa.
 
 ---
 

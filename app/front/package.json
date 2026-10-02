@@ -2,6 +2,7 @@
   "name": "@mochiblog/front",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.25.0",
   "scripts": {
     "dev": "nuxt dev",
     "build": "nuxt build",
