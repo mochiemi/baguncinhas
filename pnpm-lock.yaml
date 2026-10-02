@@ -23,8 +23,8 @@ importers:
         specifier: ^5.2.0
         version: 5.12.5
       sanitize-html:
-        specifier: ^2.14.0
-        version: 2.18.0
+        specifier: 2.17.1
+        version: 2.17.1
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -1690,9 +1690,6 @@ packages:
   dateformat@4.6.3:
     resolution: {integrity: sha512-2P0p0pFGzHS5EMnhdxQi7aJN+iMheud0UhG4dlE1DLAlvL8JHjJJTX/CSm4JXwV0Ka5nGk3zC5mcb5bUQUxxMA==}
 
-  dayjs@1.11.23:
-    resolution: {integrity: sha512-QDTCU0M0MxR3hQfnlDJfwekQiaanm1ubOD231u73WBckQ/fsamwRLiE2GBz6D3a/xF1NgfiDLJjXBa1hYOYTtQ==}
-
   db0@0.3.4:
     resolution: {integrity: sha512-RiXXi4WaNzPTHEOu8UPQKMooIbqOEyqA1t7Z6MsdxSCeb8iUC9ko3LcmsLmeUt2SM5bctfArZKkRQggKZz7JNw==}
     peerDependencies:
@@ -2101,6 +2098,9 @@ packages:
     resolution: {integrity: sha512-Tz7u1i95/g2x2jz81+x0FBVhBhY5aRTvD3tXXdFaljuNdzDLJ8UGNRrTcj2cgQvAg3iW/h77Fz15nLW0L0CrZw==}
     engines: {node: '>=20.19.0'}
 
+  htmlparser2@8.0.2:
+    resolution: {integrity: sha512-GYdjWKDkbRLkZ5geuHs5NY1puJ+PXwP7+fHPRz06Eirsb9ugf6d8kkXav6ADhcODhFFPMIXyxkxSuMf3D6NCFA==}
+
   http-errors@2.0.1:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
     engines: {node: '>= 0.8'}
@@ -2271,9 +2271,6 @@ packages:
 
   launch-editor@2.14.1:
     resolution: {integrity: sha512-QWBrQsMpH7gPr965dsKD/3cKWiNoTjpATQf++Xq63N6sKRGMwlVXz41O1IZTMfZQgBctD/K5Zt06+/I6pP6+HA==}
-
-  launder@1.7.2:
-    resolution: {integrity: sha512-DLg3HPnHUfBi5/MxMLmJD12dmlMpFEC2HgMW6vkZ/9JR0RU00kXoRGvDxAvFmdO0o610OA77i4FgNTLucmhDVg==}
 
   lazystream@1.0.1:
     resolution: {integrity: sha512-b94GiNHQNy6JNTrt5w6zNyffMrNkXZb3KTkCZJb2V1xaEGCk093vkZ2jk3tpaeP33/OiXC+WvK9AxUebnf5nbw==}
@@ -2949,9 +2946,8 @@ packages:
     resolution: {integrity: sha512-b3rppTKm9T+PsVCBEOUR46GWI7fdOs00VKZ1+9c1EWDaDMvjQc6tUwuFyIprgGgTcWoVHSKrU8H31ZHA2e0RHA==}
     engines: {node: '>=10'}
 
-  sanitize-html@2.18.0:
-    resolution: {integrity: sha512-CvY+PV+NBhxe3BnjFI5f//vEDKLULm9OlZArso7gdgVsWvanBuq9PNDx+/2llfL+8XFYa/UNBxvqRBg3TWU2Ug==}
-    engines: {node: '>=22.12.0'}
+  sanitize-html@2.17.1:
+    resolution: {integrity: sha512-ehFCW+q1a4CSOWRAdX97BX/6/PDEkCqw7/0JXZAGQV57FQB3YOkTa/rrzHPeJ+Aghy4vZAFfWMYyfxIiB7F/gw==}
 
   sax@1.6.1:
     resolution: {integrity: sha512-42tBVwLWnaQvW5zc4HbZrTuWccECCZfBi92FDuwtqxasH+JbPB3/FOKb1m222K42R4WxuxzzMsTswfzgtSu64Q==}
@@ -5361,8 +5357,6 @@ snapshots:
 
   dateformat@4.6.3: {}
 
-  dayjs@1.11.23: {}
-
   db0@0.3.4: {}
 
   de-indent@1.0.2: {}
@@ -5754,6 +5748,13 @@ snapshots:
       domutils: 4.0.2
       entities: 8.1.0
 
+  htmlparser2@8.0.2:
+    dependencies:
+      domelementtype: 2.3.0
+      domhandler: 5.0.3
+      domutils: 3.2.2
+      entities: 4.5.0
+
   http-errors@2.0.1:
     dependencies:
       depd: 2.0.0
@@ -5905,10 +5906,6 @@ snapshots:
     dependencies:
       picocolors: 1.1.1
       shell-quote: 1.11.0
-
-  launder@1.7.2:
-    dependencies:
-      dayjs: 1.11.23
 
   lazystream@1.0.1:
     dependencies:
@@ -6842,13 +6839,12 @@ snapshots:
 
   safe-stable-stringify@2.5.0: {}
 
-  sanitize-html@2.18.0:
+  sanitize-html@2.17.1:
     dependencies:
       deepmerge: 4.3.1
       escape-string-regexp: 4.0.0
-      htmlparser2: 12.0.0
+      htmlparser2: 8.0.2
       is-plain-object: 5.1.0
-      launder: 1.7.2
       parse-srcset: 1.0.2
       postcss: 8.5.28
 

@@ -11,6 +11,18 @@ import { IMAGE_WIDTH, resizeBloggerImage } from './images.js'
  * comentário copiado, de um embed de terceiro ou de um widget do template.
  * Sanitizar aqui, uma vez, no servidor, é mais seguro e mais barato do que
  * tentar limpar depois em cada cliente.
+ *
+ * ATENÇÃO à versão do sanitize-html (está cravada em `package.json`).
+ * Ele é CommonJS e faz `require()` da biblioteca `htmlparser2` por dentro.
+ * Só que a partir do sanitize-html 2.17.2 a dependência passou a ser o
+ * htmlparser2 10+, que é ESM puro ("type": "module"). Carregar ESM de dentro
+ * de CommonJS por `require()` só é possível em Node 22.12 ou mais novo — e o
+ * ambiente de produção do Vercel NÃO estava com essa versão, então o servidor
+ * morria no boot com "require() of ES Module ... not supported".
+ *
+ * Por isso fixamos `sanitize-html` em 2.17.1, a última versão que usa o
+ * htmlparser2 8 (CommonJS) e funciona em qualquer Node. NÃO troque para `^`
+ * nem faça upgrade sem antes checar essa dependência.
  */
 
 /**
