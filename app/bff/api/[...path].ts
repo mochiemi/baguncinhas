@@ -2,6 +2,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 
 import type { FastifyInstance } from 'fastify'
 
+import { resolveRequestUrl } from '../src/lib/request-url.js'
+
 /**
  * Adaptador para função serverless do Vercel.
  *
@@ -15,9 +17,28 @@ import type { FastifyInstance } from 'fastify'
  * O Fastify só precisa do evento `request` para executar todo o pipeline dele.
  * É essa linha que faz um servidor HTTP virar uma função.
  *
- * O nome do arquivo `[...path].ts` é uma rota "pega-tudo" do Vercel: qualquer
- * caminho sob /api cai aqui, preservando a URL original em `req.url`. É isso
- * que permite o Fastify rotear normalmente.
+ * ---------------------------------------------------------------------------
+ * O NOME DESTE ARQUIVO NÃO É UM PEGA-TUDO. ISSO JÁ DERRUBOU QUASE TODA A API.
+ * ---------------------------------------------------------------------------
+ * A suposição natural — e era o que estava escrito aqui antes — é que
+ * `[...path].ts` casa com qualquer caminho abaixo de /api. Não casa. Nesta
+ * pasta de funções, fora do Next.js, o Vercel gera a rota casando UM segmento:
+ *
+ *   /api/health        -> chega aqui
+ *   /api/posts         -> chega aqui
+ *   /api/posts/test-4  -> 404 do próprio Vercel, sem executar uma linha nossa
+ *   /api/auth/login    -> 404 do próprio Vercel, sem executar uma linha nossa
+ *
+ * O sintoma engana: metade da API funcionava (as rotas de um segmento) e a
+ * outra metade devolvia a página de erro do Vercel. O login caía no segundo
+ * grupo, então o painel ficou inalcançável em produção enquanto tudo passava
+ * nos testes locais.
+ *
+ * A correção tem duas partes:
+ *   1. `vercel.json` reescreve `/api/*` para este arquivo, mandando o caminho
+ *      real no parâmetro `rest`.
+ *   2. `resolveRequestUrl` recomõe a URL a partir daí antes de entregar ao
+ *      Fastify.
  *
  * ---------------------------------------------------------------------------
  * POR QUE O IMPORT É DINÂMICO, E POR QUE ISSO IMPORTA
@@ -82,6 +103,10 @@ export default async function handler(
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<void> {
+  // Antes de qualquer coisa: o Fastify tem que enxergar o caminho REAL.
+  // O porquê está inteiro em `src/lib/request-url.ts`.
+  request.url = resolveRequestUrl(request.url)
+
   let app: FastifyInstance
 
   try {
