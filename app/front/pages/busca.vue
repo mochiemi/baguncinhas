@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Paginated, PostSummary } from '@mochiblog/shared'
+import type { Paginated, PostSummary } from '../../bff/src/shared/index.js'
 
 const route = useRoute()
 const router = useRouter()

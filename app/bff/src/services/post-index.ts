@@ -4,7 +4,7 @@ import {
   type Paginated,
   type Post,
   type PostSummary,
-} from '@mochiblog/shared'
+} from '../shared/index.js'
 
 import { fetchAllPosts } from '../blogger/client.js'
 import type { RawPost } from '../blogger/types.js'

@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import type { PostSummary } from '@mochiblog/shared'
+// O contrato da API vive no BFF, e o front o consome com `import type`: isto é
+// apagado na compilação, então nem o Zod nem o schema entram no bundle.
+import type { PostSummary } from '../../bff/src/shared/index.js'
 
 /**
- * Só importamos o TIPO do pacote compartilhado, com `import type`.
- * Isso é apagado na compilação, então nada do `@mochiblog/shared` (nem o Zod)
- * acaba no bundle que o navegador baixa.
+ * Só importamos o TIPO, com `import type`.
+ * Isso é apagado na compilação, então nada do contrato (nem o Zod) acaba no
+ * bundle que o navegador baixa.
  */
 defineProps<{ post: PostSummary }>()
 </script>

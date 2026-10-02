@@ -1,4 +1,6 @@
-import type { LabelSummary, Paginated, Post, PostSummary } from '@mochiblog/shared'
+// O contrato da API vive no BFF, e o front o consome daqui. É `import type`, então
+// isto é apagado na compilação: nada atravessa para o bundle do navegador.
+import type { LabelSummary, Paginated, Post, PostSummary } from '../../bff/src/shared/index.js'
 
 export interface ListPostsParams {
   page?: number

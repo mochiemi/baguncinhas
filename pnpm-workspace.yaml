@@ -1,9 +1,12 @@
-# Um único `pnpm install` na raiz instala os três pacotes e cria os links
-# simbólicos entre eles. É isso que faz o `@mochiblog/shared` funcionar sem
-# publicar nada no npm.
+# Um único `pnpm install` na raiz instala os dois projetos do app.
+#
+# Existia um terceiro pacote, `packages/shared`, com os tipos e schemas que o
+# front e o BFF compartilhavam. Ele foi MOVIDO para `app/bff/src/shared/`, porque
+# o Vercel não empacota arquivo que mora fora da Root Directory do projeto: a
+# função subia sem ele e morria na inicialização. O front consome os tipos de lá
+# com `import type`, que não gera dependência em tempo de execução.
 packages:
   - 'app/*'
-  - 'packages/*'
 
 # O pnpm bloqueia scripts de instalação por padrão. É uma boa proteção: um
 # pacote malicioso não roda código arbitrário no seu `pnpm install` só por

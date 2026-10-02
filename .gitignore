@@ -6,12 +6,6 @@ dist/
 .nitro/
 .cache/
 
-# O adaptador do Vercel é GERADO por `pnpm build`, em
-# app/bff/scripts/build-function.mjs. Não vai para o Git de propósito: uma cópia
-# versionada ficaria velha em silêncio, e o site publicado serviria código que
-# ninguém escreveu.
-app/bff/api/*.js
-
 # Segredos. O .env.example é versionado de propósito: ele documenta quais
 # variáveis existem, sem revelar valores.
 #
