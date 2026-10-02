@@ -188,9 +188,11 @@ export async function inspectAuthorization(accessToken: string): Promise<Authori
   let grantedScopes: string[] = []
 
   try {
-    const response = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`,
-      { signal: AbortSignal.timeout(5000) },
+    const response = asHttpResponse(
+      await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`,
+        { signal: AbortSignal.timeout(5000) },
+      ),
     )
     if (response.ok) {
       const payload = (await response.json()) as { email?: string; scope?: string }
@@ -218,9 +220,11 @@ export async function inspectAuthorization(accessToken: string): Promise<Authori
 
   try {
     const blogId = await getBlogId()
-    const response = await fetch(
-      `https://www.googleapis.com/blogger/v3/users/self/blogs/${blogId}`,
-      { headers, signal: AbortSignal.timeout(5000) },
+    const response = asHttpResponse(
+      await fetch(`https://www.googleapis.com/blogger/v3/users/self/blogs/${blogId}`, {
+        headers,
+        signal: AbortSignal.timeout(5000),
+      }),
     )
 
     if (!response.ok) {
@@ -273,10 +277,12 @@ export async function listAdministeredBlogs(
   accessToken: string,
 ): Promise<{ id: string; name: string; url: string }[]> {
   try {
-    const response = await fetch('https://www.googleapis.com/blogger/v3/users/self/blogs', {
-      headers: { authorization: `Bearer ${accessToken}` },
-      signal: AbortSignal.timeout(5000),
-    })
+    const response = asHttpResponse(
+      await fetch('https://www.googleapis.com/blogger/v3/users/self/blogs', {
+        headers: { authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(5000),
+      }),
+    )
 
     // Lista é conveniência: se falhar, a página de erro segue sem ela.
     if (!response.ok) return []

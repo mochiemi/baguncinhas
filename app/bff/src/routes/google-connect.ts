@@ -7,6 +7,7 @@ import { requireSession } from '../auth/guard.js'
 import { sealValue, unsealValue } from '../auth/session.js'
 import { inspectAuthorization, listAdministeredBlogs } from '../blogger/oauth.js'
 import { env, googleConnectConfig, googleRedirectUri } from '../env.js'
+import { asHttpResponse } from '../lib/http.js'
 
 const OAUTH_AUTHORIZE_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token'
@@ -179,12 +180,14 @@ async function exchangeCode(params: {
     grant_type: 'authorization_code',
   })
 
-  const response = await fetch(OAUTH_TOKEN_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body,
-    signal: AbortSignal.timeout(8000),
-  })
+  const response = asHttpResponse(
+    await fetch(OAUTH_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body,
+      signal: AbortSignal.timeout(8000),
+    }),
+  )
 
   return (await response.json()) as TokenPayload
 }

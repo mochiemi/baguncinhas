@@ -15,6 +15,7 @@
  */
 import { getBlogId } from '../src/blogger/client.js'
 import { getAccessToken } from '../src/blogger/oauth.js'
+import { asHttpResponse } from '../src/lib/http.js'
 
 /** Mostra JSON legível sem estourar a largura do terminal. */
 function show(label: string, value: unknown): void {
@@ -26,7 +27,9 @@ const token = await getAccessToken()
 const blogId = await getBlogId()
 
 const call = async (url: string): Promise<unknown> => {
-  const response = await fetch(url, { headers: { authorization: `Bearer ${token}` } })
+  const response = asHttpResponse(
+    await fetch(url, { headers: { authorization: `Bearer ${token}` } }),
+  )
   const body: unknown = await response.json().catch(() => null)
   console.log(`\n--- GET ${url}`)
   console.log(`HTTP ${response.status}`)
@@ -51,9 +54,10 @@ show('userinfo (quem é o dono do token)', await call('https://www.googleapis.co
  * Feito fora do `call` de propósito: aqui o token vai na URL, e eu não quero que
  * ele apareça no terminal.
  */
-const tokenInfo = (await (
-  await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${token}`)
-).json()) as { scope?: string }
+const tokenInfoResponse = asHttpResponse(
+  await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${token}`),
+)
+const tokenInfo = (await tokenInfoResponse.json()) as { scope?: string }
 
 const grantedScopes = (tokenInfo.scope ?? '').split(' ').filter(Boolean)
 console.log(`\n=== Escopos concedidos (${grantedScopes.length}) ===`)
