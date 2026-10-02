@@ -23,25 +23,34 @@ try {
  * vez de subir, parecer saudável e estourar 500 no primeiro post lido.
  */
 /**
- * Trata string vazia como ausente, em TODO o ambiente.
+ * Normaliza o ambiente antes de validar: nome e valor.
  *
- * Vazio é o jeito natural de dizer "não configurei isso ainda". Enquanto o
- * tratamento existia só nas variáveis de texto opcionais, havia um buraco: quem
- * cola as chaves do `.env.example` no painel do provedor cria `INDEX_TTL_MS=`
- * vazia, o `z.coerce.number()` converte '' em 0, o `.positive()` recusa, e o
- * processo morre na inicialização. Em serverless isso vira um 500 sem explicação
- * em toda rota, inclusive numa que não existe.
+ * Três correções, todas nascidas de problemas reais ao hospedar isto.
  *
- * A regra vale para qualquer variável, e principalmente para as que têm valor
- * padrão: vazio significa "não configurei", então o padrão é que deve entrar.
+ * 1. **BOM no começo do nome.** Ao importar um bloco `.env` colado de um arquivo
+ *    gravado no Windows, o primeiro byte pode virar parte da primeira chave. O
+ *    caractere é invisível: na tela o nome parece certo, e a variável de verdade
+ *    simplesmente não existe. Foi assim que `BLOGGER_API_KEY` — a única
+ *    obrigatória — desapareceu, e o deploy inteiro passou a responder 500 sem
+ *    dizer por quê.
+ * 2. **Espaço em volta do nome.** Mesmo efeito, igualmente invisível na tela.
+ * 3. **Valor vazio.** Vazio é o jeito natural de dizer "não configurei isso
+ *    ainda", então é ausente, e o valor padrão é que deve entrar. Antes isto
+ *    valia só para as variáveis de texto, e por isso um `INDEX_TTL_MS=` vazio
+ *    (herança de colar as chaves do `.env.example`) virava `0` e derrubava a
+ *    inicialização.
+ *
+ * A lição das três: configuração vinda de fora é texto digitado por alguém num
+ * painel, e o programa não pode depender de esse texto ter vindo perfeito.
  */
-function withoutEmptyValues(source: NodeJS.ProcessEnv): Record<string, string> {
+function normalizeEnvironment(source: NodeJS.ProcessEnv): Record<string, string> {
   const result: Record<string, string> = {}
-  for (const [key, value] of Object.entries(source)) {
-    // `trim()` junto porque um campo de painel com espaço perdido é indistinguível
-    // de um campo vazio para quem digitou, e o efeito seria o mesmo 500.
+
+  for (const [rawKey, value] of Object.entries(source)) {
+    const key = rawKey.replace(/^\uFEFF/, '').trim()
     if (value !== undefined && value.trim() !== '') result[key] = value
   }
+
   return result
 }
 
@@ -136,7 +145,7 @@ const EnvSchema = z.object({
   GOOGLE_REFRESH_TOKEN: optionalString(z.string().trim().min(1)),
 })
 
-const parsed = EnvSchema.safeParse(withoutEmptyValues(process.env))
+const parsed = EnvSchema.safeParse(normalizeEnvironment(process.env))
 
 if (!parsed.success) {
   // Mensagem legível: campo + motivo, sem o dump gigante do ZodError.
