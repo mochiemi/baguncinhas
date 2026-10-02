@@ -46,37 +46,36 @@ function getApp(): Promise<FastifyInstance> {
   return appPromise
 }
 
-/** A mensagem que o `env.ts` produz quando a configuração não fecha. */
-const ENV_ERROR_PREFIX = 'Configuração inválida do ambiente'
-
 /**
  * Explica a falha em vez de devolver um 500 mudo.
  *
- * O que sai na resposta é só o essencial, e só quando o erro é o nosso: a
- * mensagem do `env.ts` lista NOMES de variável e o motivo, nunca valores. É
- * informação de operação, não segredo, e o serviço está fora do ar de qualquer
- * forma.
+ * A mensagem vai na resposta em QUALQUER caso, e o motivo merece ser dito porque
+ * eu errei nisso: na primeira versão eu só mostrava o detalhe quando o erro era o
+ * meu de configuração, e escondia o resto atrás de um "veja o log". O resultado
+ * foi um 503 genérico que não dizia nada — exatamente o problema que este
+ * tratador existe para resolver.
  *
- * Para qualquer outro erro, a resposta é genérica de propósito: uma exceção
- * inesperada pode carregar token ou URL com credencial dentro, e isso não pode
- * ir para o corpo de uma resposta pública. O detalhe fica no log.
+ * O que tornou a decisão fácil foi perceber o contexto: isto é uma falha de
+ * INICIALIZAÇÃO. Acontece antes de qualquer requisição ser processada, então não
+ * existe dado de requisição para vazar. O que aparece são nomes de variável,
+ * caminhos de arquivo e motivos de recusa do Node — nada que sirva a quem não
+ * deveria ver.
+ *
+ * A trilha completa, com a pilha, continua indo para o log.
  */
 function fail(response: ServerResponse, error: unknown): void {
   const message = error instanceof Error ? error.message : String(error)
-  const isConfigError = message.startsWith(ENV_ERROR_PREFIX)
 
-  console.error('[bff] falha ao iniciar:', message)
-
-  const body = isConfigError
-    ? `O BFF não conseguiu iniciar por causa da configuração do ambiente.\n\n${message}\n\n` +
-      'Nenhuma dessas variáveis é segredo: são nomes e o motivo da recusa. ' +
-      'Corrija no painel do provedor e publique de novo.\n'
-    : 'O BFF não conseguiu iniciar. O motivo está no log da função.\n'
+  console.error('[bff] falha ao iniciar:', error)
 
   response.statusCode = 503
   response.setHeader('content-type', 'text/plain; charset=utf-8')
   response.setHeader('cache-control', 'no-store')
-  response.end(body)
+  response.end(
+    `O BFF não conseguiu iniciar.\n\n${message}\n\n` +
+      'Nenhum valor de variável aparece aqui: só nomes, caminhos e motivos.\n' +
+      'A trilha completa, com a pilha, está no log da função.\n',
+  )
 }
 
 export default async function handler(
