@@ -113,17 +113,28 @@ roda, e o build quebra com um erro que não menciona nada disso. Acrescente ao
 `process.loadEnvFile`, que é do Node 22. O `engines` da raiz diz `>=20.11`, e isso
 não basta. Confira em Settings > Node.js Version.
 
-### A ordem importa
+### Você não precisa ter URL nenhuma agora
 
-Existe uma dependência em círculo, e ela se resolve em duas passadas:
+Vale dizer isto antes de tudo, porque é o que mais confunde: **no primeiro deploy
+você não tem URL alguma, e isso é o esperado.** Cada deploy é que cria a URL que o
+passo seguinte precisa. O custo dessa ordem é um ou dois redeploys, que no Vercel
+levam menos de um minuto.
+
+O que existe é uma dependência, e ela dita a sequência:
 
 - o **BFF** precisa da URL do front, para montar o endereço de redirecionamento do
   Google (`SITE_ORIGIN`);
-- o **front** precisa da URL do BFF (`BFF_URL`), que é lida em **tempo de build**,
-  porque alimenta o `routeRules.proxy` do Nitro.
+- o **front** precisa da URL do BFF (`BFF_URL`), lida em **tempo de build**, porque
+  alimenta o `routeRules.proxy` do Nitro.
 
-Variável de ambiente em função serverless só passa a valer depois de um novo
-deploy, então a segunda passada no BFF não é opcional.
+A regra, então, é uma só: **sobe um, anota a URL, usa no outro.** E como variável
+de ambiente de função serverless só passa a valer depois de um novo deploy,
+voltar no BFF no fim não é opcional.
+
+Onde a URL aparece: assim que o deploy termina, o Vercel mostra o domínio no topo
+da página do projeto, na aba Domains. O formato é sempre
+`https://<nome-do-projeto>.vercel.app`, e o nome do projeto é você que escolhe na
+hora de criar.
 
 ### 1. Projeto do BFF
 
@@ -143,7 +154,7 @@ Variáveis:
 BLOGGER_API_KEY
 BLOGGER_BLOG_URL
 BLOGGER_BLOG_ID
-SITE_ORIGIN            <- a URL do front, que só existe depois do passo 2
+SITE_ORIGIN            <- deixe para depois; só se sabe no passo 3
 ADMIN_USER
 ADMIN_PASSWORD_HASH
 SESSION_SECRET
@@ -156,6 +167,10 @@ Não cadastre `PORT` (o Vercel não abre porta) nem `CORS_ORIGINS` (o front fala
 o BFF pelo proxy, então não existe requisição cross-origin para autorizar).
 `NODE_ENV` o Vercel define sozinho; cadastrar também não faz mal.
 
+`SITE_ORIGIN` tem valor padrão (`http://localhost:3000`), então o BFF sobe sem ela
+e serve a API normalmente. Só o fluxo de autorização do Google depende dela, e
+quando você chegar nesse ponto a URL do front já vai existir.
+
 ⚠️ `SESSION_SECRET` e `GOOGLE_REFRESH_TOKEN` são segredos de verdade. Marque os
 dois como sensíveis no painel, e nunca os cole em arquivo que vá para o
 repositório.
@@ -163,6 +178,9 @@ repositório.
 ⚠️ **Trocar o `SESSION_SECRET` invalida todas as sessões abertas.** O cookie é
 criptografado com ele. Se você entrar no painel e de repente ele pedir login sem
 motivo, foi isso.
+
+**Ao terminar o deploy, anote a URL do projeto.** É ela que alimenta o `BFF_URL`
+do passo seguinte.
 
 ### 2. Projeto do Front
 
@@ -174,8 +192,8 @@ motivo, foi isso.
 Variáveis:
 
 ```
-BFF_URL               <- a URL do BFF, sem barra no fim
-NUXT_PUBLIC_SITE_URL  <- a URL do front
+BFF_URL               <- a URL anotada no fim do passo 1, sem barra no fim
+NUXT_PUBLIC_SITE_URL  <- deixe vazio agora; ainda não existe
 ```
 
 ⚠️ **Não esqueça a `NUXT_PUBLIC_SITE_URL`.** Sem ela, o `siteUrl` fica no padrão do
@@ -187,13 +205,31 @@ e o mais silencioso.
 ⚠️ `BFF_URL` é lida em **tempo de build**. Se você definir depois do primeiro
 deploy, precisa refazer o build para o proxy apontar para o lugar certo.
 
+**Sobre a `NUXT_PUBLIC_SITE_URL`:** como o front ainda não foi publicado, você não
+tem essa URL agora. Duas saídas.
+
+- **Deixe vazio e complete depois.** Faça o deploy, copie a URL que o Vercel deu,
+cadastre e faça o deploy de novo. Uma passada a mais, e nada é adivinhado. É o
+caminho recomendado.
+- **Adiante o nome do projeto.** Se você nomear o projeto de `mochiblog-front`, o
+endereço de produção será `https://mochiblog-front.vercel.app`, e dá para cadastrar
+de primeira. Só vale se você não se importar de conferir depois.
+
+Não faça o deploy do front antes do BFF: sem o `BFF_URL` o proxy cai no padrão
+(`http://localhost:3001`) e o site sobe quebrado, com tudo respondendo erro de
+conexão. O deploy funciona, o site não.
+
 ### 3. Fechar o círculo
 
-1. Copie a URL do projeto do BFF (algo como `https://mochiblog-bff.vercel.app`).
-2. Cole em `BFF_URL`, no projeto do front, e faça o deploy.
-3. Copie a URL do front.
-4. Volte no BFF, ponha essa URL em `SITE_ORIGIN` e faça o deploy de novo.
-5. Cadastre o endereço de redirecionamento no Google Cloud:
+É aqui que as duas URLs se encontram. São dois redeploys, e nenhum é opcional.
+
+1. **Anote a URL do front**, que o Vercel mostrou no fim do deploy do passo 2.
+2. **No projeto do front**, cadastre essa URL em `NUXT_PUBLIC_SITE_URL` e faça o
+   deploy de novo. É isso que corrige o `canonical` e o `og:url`.
+3. **No projeto do BFF**, cadastre a mesma URL em `SITE_ORIGIN` e faça o deploy de
+   novo. Sem isso, o endereço de redirecionamento do Google continua apontando
+   para localhost, e a autorização falha reclamando de endereço não cadastrado.
+4. **No Google Cloud**, cadastre o endereço de retorno:
 
    ```
    https://<projeto-do-front>.vercel.app/api/auth/google/callback
