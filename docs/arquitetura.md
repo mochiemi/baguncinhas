@@ -319,6 +319,48 @@ Repare no detalhe que quase passou: `2.17.0` e `2.17.1` usam `htmlparser2 ^8`, e
 A regra que ficou: uma dependência que exige Node recente é uma dependência que
 você não controla. Prefira a versão que funciona em qualquer lugar.
 
+### A armadilha do nome `[...path].ts`
+
+Havia no código uma suposição escrita com todas as letras: a de que
+`api/[...path].ts` seria um pega-tudo, e que qualquer caminho abaixo de `/api`
+cairia ali. Não é.
+
+Medido em produção, com quatro requisições:
+
+| Caminho | Segmentos | Resultado |
+|---|---|---|
+| `/api/health` | 1 | chega na função |
+| `/api/posts` | 1 | chega na função |
+| `/api/posts/test-4` | 2 | 404 do Vercel, sem executar nada nosso |
+| `/api/auth/login` | 2 | 404 do Vercel, sem executar nada nosso |
+
+Fora do Next.js, nessa pasta de funções, o Vercel gera uma rota casando **um**
+segmento. O `[...path]` do nome do arquivo não muda isso.
+
+O disfarce é a pior parte do sintoma: metade da API funcionava — as rotas de um
+segmento, que por coincidência são home, rótulos e busca — e a outra metade
+devolvia a página de erro do Vercel. O login caía no lado quebrado, então o
+painel ficou inalcançável em produção enquanto o servidor local respondia tudo
+certo, porque lá quem roteia é o Fastify e não o Vercel.
+
+A correção tem duas partes. A primeira é uma reescrita em
+`app/bff/vercel.json`:
+
+```json
+{ "source": "/api/(.*)", "destination": "/api/[...path]?rest=$1" }
+```
+
+A segunda é a função remontar a URL antes de entregar ao Fastify, em
+`app/bff/src/lib/request-url.ts`. Ela aceita as duas formas possíveis de
+propósito: com a URL original preservada, ou com o caminho real vindo no
+parâmetro `rest`. Qual das duas acontece é detalhe interno do Vercel que ninguém
+prometeu, e aceitar ambas custa menos do que uma rodada de deploy para descobrir.
+
+**A lição que fica.** Comportamento que ninguém mediu não é comportamento
+conhecido — é suposição, mesmo quando está escrita num comentário do código.
+Aquele comentário afirmava o pega-tudo com convicção. Comentário não é prova, e
+foi o que manteve o bug vivo depois de um deploy que parecia ter dado certo.
+
 ---
 
 ## 7. SEO: a estratégia e o que falta

@@ -258,13 +258,17 @@ o aviso de app não verificado, mas o token deixa de morrer a cada semana.
 
 ### O que já se sabe sobre o build
 
-Três pontos que valem saber antes de mexer, todos já exercitados no deploy real.
+Quatro pontos que valem saber antes de mexer, todos já exercitados no deploy real.
 
 - **O código compartilhado mora em `app/bff/src/shared/`**, não mais em
   `packages/shared`. O Vercel só empacota os arquivos que alcança dentro da Root
   Directory do projeto, então um pacote fora dela não entra na função. O caminho
   completo do problema está na seção 6 de
   [`docs/arquitetura.md`](docs/arquitetura.md).
+- **`api/[...path].ts` NÃO é um pega-tudo.** O Vercel casa um segmento só, então
+  `/api/health` chega mas `/api/posts/test-4` e `/api/auth/login` devolvem a
+  página de erro dele. É o `app/bff/vercel.json` que faz a reescrita resolver
+  isso. Se você renomear ou mover a função, mexa nos dois.
 - **O BFF importa `../src/app.js` enquanto o arquivo é `app.ts`.** Parecia
   arriscado, mas está verificado que o compilador do Vercel resolve igual: a prova
   veio de um erro de boot que só acontecia depois das rotas carregarem.
