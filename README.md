@@ -85,23 +85,154 @@ pnpm build            # build de produção
 
 ## Deploy no Vercel
 
-Dois projetos, apontando para pastas diferentes do MESMO repositório.
+Dois projetos, apontando para pastas diferentes do mesmo repositório. O motivo da
+separação é o de sempre: o BFF guarda o refresh token do Google, e isso não pode
+encostar no navegador.
 
-**Projeto 1 — BFF**
+O repositório precisa estar no GitHub, GitLab ou Bitbucket. O `.env` está no
+`.gitignore`, então nenhum segredo viaja no push: as variáveis são cadastradas à
+mão, no painel do Vercel. Os dois `.env.example` são a lista de conferência.
 
-- Root Directory: `app/bff`
-- Variáveis: `BLOGGER_API_KEY`, `BLOGGER_BLOG_URL`, `BLOGGER_BLOG_ID`,
-  `SITE_ORIGIN` (o domínio final do site), `NODE_ENV=production`
-- Nada de build command especial. A função em `api/[...path].ts` é detectada
-  automaticamente.
+### Antes de começar
 
-**Projeto 2 — Front**
+Duas coisas que o build de produção exige e o desenvolvimento não cobra.
 
-- Root Directory: `app/front`
-- Variáveis: `BFF_URL` (a URL do projeto 1, sem barra no fim) e
-  `NUXT_PUBLIC_SITE_URL` (o domínio final do site)
-- ⚠️ `BFF_URL` é lida em **tempo de build**. Se você definir depois do primeiro
-  deploy, precisa refazer o build para o proxy apontar para o lugar certo.
+**1. Fixe a versão do pnpm.** O `allowBuilds` do `pnpm-workspace.yaml` é chave do
+**pnpm 11**. Sem instrução em contrário, o Vercel escolhe o pnpm pela versão do
+lockfile — e o seu lockfile diz `lockfileVersion: '9.0'`, que é a mesma versão
+gravada pelo pnpm 9, 10 e 11. Ou seja: ele não tem como saber que precisa do 11.
+Instalando com outro, a chave é ignorada, o script de instalação do esbuild não
+roda, e o build quebra com um erro que não menciona nada disso. Acrescente ao
+`package.json` da raiz:
+
+```json
+"packageManager": "pnpm@11.25.0"
+```
+
+**2. Use Node 22 nos dois projetos.** O `src/env.ts` do BFF chama
+`process.loadEnvFile`, que é do Node 22. O `engines` da raiz diz `>=20.11`, e isso
+não basta. Confira em Settings > Node.js Version.
+
+### A ordem importa
+
+Existe uma dependência em círculo, e ela se resolve em duas passadas:
+
+- o **BFF** precisa da URL do front, para montar o endereço de redirecionamento do
+  Google (`SITE_ORIGIN`);
+- o **front** precisa da URL do BFF (`BFF_URL`), que é lida em **tempo de build**,
+  porque alimenta o `routeRules.proxy` do Nitro.
+
+Variável de ambiente em função serverless só passa a valer depois de um novo
+deploy, então a segunda passada no BFF não é opcional.
+
+### 1. Projeto do BFF
+
+| Campo | Valor |
+|---|---|
+| Root Directory | `app/bff` |
+| Framework Preset | Other |
+| Build Command | deixe o padrão |
+
+Nada de build command especial. A função em `api/[...path].ts` é detectada
+automaticamente, e o `app` fica fora do handler de propósito, para o índice de
+posts sobreviver entre invocações.
+
+Variáveis:
+
+```
+BLOGGER_API_KEY
+BLOGGER_BLOG_URL
+BLOGGER_BLOG_ID
+SITE_ORIGIN            <- a URL do front, que só existe depois do passo 2
+ADMIN_USER
+ADMIN_PASSWORD_HASH
+SESSION_SECRET
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+GOOGLE_REFRESH_TOKEN
+```
+
+Não cadastre `PORT` (o Vercel não abre porta) nem `CORS_ORIGINS` (o front fala com
+o BFF pelo proxy, então não existe requisição cross-origin para autorizar).
+`NODE_ENV` o Vercel define sozinho; cadastrar também não faz mal.
+
+⚠️ `SESSION_SECRET` e `GOOGLE_REFRESH_TOKEN` são segredos de verdade. Marque os
+dois como sensíveis no painel, e nunca os cole em arquivo que vá para o
+repositório.
+
+⚠️ **Trocar o `SESSION_SECRET` invalida todas as sessões abertas.** O cookie é
+criptografado com ele. Se você entrar no painel e de repente ele pedir login sem
+motivo, foi isso.
+
+### 2. Projeto do Front
+
+| Campo | Valor |
+|---|---|
+| Root Directory | `app/front` |
+| Framework Preset | Nuxt.js (detectado automaticamente) |
+
+Variáveis:
+
+```
+BFF_URL               <- a URL do BFF, sem barra no fim
+NUXT_PUBLIC_SITE_URL  <- a URL do front
+```
+
+⚠️ **Não esqueça a `NUXT_PUBLIC_SITE_URL`.** Sem ela, o `siteUrl` fica no padrão do
+`nuxt.config.ts`, que é `http://localhost:3000`, e o `canonical` e o `og:url` de
+todas as páginas passam a apontar para localhost. Nenhuma tela mostra isso: só o
+HTML. Para um site que existe para aparecer em busca, é o pior defeito possível,
+e o mais silencioso.
+
+⚠️ `BFF_URL` é lida em **tempo de build**. Se você definir depois do primeiro
+deploy, precisa refazer o build para o proxy apontar para o lugar certo.
+
+### 3. Fechar o círculo
+
+1. Copie a URL do projeto do BFF (algo como `https://mochiblog-bff.vercel.app`).
+2. Cole em `BFF_URL`, no projeto do front, e faça o deploy.
+3. Copie a URL do front.
+4. Volte no BFF, ponha essa URL em `SITE_ORIGIN` e faça o deploy de novo.
+5. Cadastre o endereço de redirecionamento no Google Cloud:
+
+   ```
+   https://<projeto-do-front>.vercel.app/api/auth/google/callback
+   ```
+
+O `GOOGLE_REFRESH_TOKEN` **não precisa ser refeito**: ele está amarrado ao client
+ID e aos escopos, não ao endereço de redirecionamento.
+
+⚠️ **Publique o app no Google Cloud.** Enquanto a tela de permissão OAuth estiver
+em "Em teste", o Google expira os refresh tokens em **7 dias**. Na prática: a
+escrita funciona hoje e para sozinha na semana que vem, com um `invalid_grant` que
+não explica o motivo. Com escopos sensíveis, publicar sem verificação ainda mostra
+o aviso de app não verificado, mas o token deixa de morrer a cada semana.
+
+### 4. Conferir depois do deploy
+
+- `/api/health` responde, com a contagem certa de posts.
+- A barra de abas mostra os rótulos.
+- `/admin` pede login, e entra com o `ADMIN_USER`.
+- O painel diz "Configurada. Os posts saem como ...". Se disser outra coisa, ele
+  já conta qual dos dois 403 foi e o que fazer.
+- O `<link rel="canonical">` no HTML aponta para o domínio do Vercel, e não para
+  localhost.
+
+### Se o build quebrar
+
+Dois pontos frágeis, nenhum deles exercitado até hoje.
+
+- **O `packages/shared` exporta `.ts` direto**, sem etapa de build. É padrão
+  conhecido de monorepo, mas depende de o empacotador resolver. As saídas estão na
+  seção 6 de [`docs/arquitetura.md`](docs/arquitetura.md): gerar `dist` com
+  `tsup`/`tsc`, ou configurar `transpile` no bundler.
+- **O BFF importa `../src/app.js`** enquanto o arquivo é `app.ts`. Isso é o estilo
+  `NodeNext` do TypeScript e funciona local porque o `tsx` resolve. Não é certo que
+  o compilador do Vercel resolva igual.
+
+Os dois aparecem **só no deploy**, o que é o pior lugar para descobrir. O jeito de
+antecipar é rodar `vercel build` na própria máquina, onde o ciclo de tentativa é
+de segundos.
 
 ## Painel restrito
 
