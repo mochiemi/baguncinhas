@@ -1,4 +1,5 @@
 import { googleWriteConfig } from '../env.js'
+import { asHttpResponse, type HttpResponse } from '../lib/http.js'
 
 import { getBlogId } from './client.js'
 
@@ -86,14 +87,16 @@ export async function getAccessToken(): Promise<string> {
     grant_type: 'refresh_token',
   })
 
-  let response: Response
+  let response: HttpResponse
   try {
-    response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body,
-      signal: AbortSignal.timeout(8000),
-    })
+    response = asHttpResponse(
+      await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body,
+        signal: AbortSignal.timeout(8000),
+      }),
+    )
   } catch (cause) {
     throw new WriteAuthError(
       `Não foi possível falar com o Google para renovar o token (${(cause as Error).message}).`,

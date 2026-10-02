@@ -1,4 +1,5 @@
 import { env } from '../env.js'
+import { asHttpResponse, type HttpResponse } from '../lib/http.js'
 
 import { BloggerError, getBlogId } from './client.js'
 import { WriteAuthError, getAccessToken } from './oauth.js'
@@ -40,17 +41,19 @@ async function writeRequest<T>(path: string, options: WriteOptions): Promise<T> 
     url.searchParams.set(name, String(value))
   }
 
-  let response: Response
+  let response: HttpResponse
   try {
-    response = await fetch(url, {
-      method: options.method,
-      headers: {
-        authorization: `Bearer ${token}`,
-        ...(options.body === undefined ? {} : { 'content-type': 'application/json' }),
-      },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: AbortSignal.timeout(env.UPSTREAM_TIMEOUT_MS),
-    })
+    response = asHttpResponse(
+      await fetch(url, {
+        method: options.method,
+        headers: {
+          authorization: `Bearer ${token}`,
+          ...(options.body === undefined ? {} : { 'content-type': 'application/json' }),
+        },
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        signal: AbortSignal.timeout(env.UPSTREAM_TIMEOUT_MS),
+      }),
+    )
   } catch (cause) {
     throw new BloggerError(
       `Não foi possível falar com a API do Blogger (${(cause as Error).message}).`,
@@ -91,7 +94,7 @@ async function writeRequest<T>(path: string, options: WriteOptions): Promise<T> 
   return (await response.json()) as T
 }
 
-async function readErrorDetail(response: Response): Promise<string> {
+async function readErrorDetail(response: HttpResponse): Promise<string> {
   try {
     const payload = (await response.json()) as { error?: { message?: string } }
     return payload.error?.message ?? ''
@@ -101,7 +104,7 @@ async function readErrorDetail(response: Response): Promise<string> {
   }
 }
 
-async function explainWriteFailure(response: Response, path: string): Promise<string> {
+async function explainWriteFailure(response: HttpResponse, path: string): Promise<string> {
   const detail = await readErrorDetail(response)
 
   const base = `O Blogger recusou a escrita em ${path} (HTTP ${response.status})`

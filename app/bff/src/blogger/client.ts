@@ -1,4 +1,5 @@
 import { env } from '../env.js'
+import { asHttpResponse, type HttpResponse } from '../lib/http.js'
 
 import type { RawBlog, RawPost, RawPostList } from './types.js'
 
@@ -59,12 +60,14 @@ async function request<T>(path: string, params: Record<string, QueryValue> = {})
     if (value !== undefined) url.searchParams.set(name, String(value))
   }
 
-  let response: Response
+  let response: HttpResponse
   try {
-    response = await fetch(url, {
-      signal: AbortSignal.timeout(env.UPSTREAM_TIMEOUT_MS),
-      headers: { accept: 'application/json' },
-    })
+    response = asHttpResponse(
+      await fetch(url, {
+        signal: AbortSignal.timeout(env.UPSTREAM_TIMEOUT_MS),
+        headers: { accept: 'application/json' },
+      }),
+    )
   } catch (cause) {
     // Timeout e queda de rede chegam aqui. Traduzimos para uma mensagem que diz
     // o que fazer, em vez de vazar um "fetch failed" genérico.
