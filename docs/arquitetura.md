@@ -33,8 +33,8 @@ flowchart LR
     F -->|"proxy server-to-server"| P["bff (Fastify)"]
     P -->|"API v3 + API key<br/>segredo no servidor"| G["Blogger"]
     P --> I["Índice em memória"]
-    S["packages/shared<br/>tipos + Zod"] -.-> F
-    S -.-> P
+    S["app/bff/src/shared<br/>tipos + Zod"] -.-> P
+    S -.->|"só os tipos,<br/>em tempo de compilação"| F
 ```
 
 O BFF é o único que conhece o Blogger. O front é o único que conhece o leitor.
@@ -43,7 +43,7 @@ O BFF é o único que conhece o Blogger. O front é o único que conhece o leito
 
 Um serviço a mais para subir, monitorar e pagar. Em compensação, cada peça pode
 mudar sem tocar na outra: trocar o Blogger por outro CMS mexe só no BFF; trocar
-Nuxt por outra coisa mexe só no front. O contrato em `packages/shared` continua
+Nuxt por outra coisa mexe só no front. O contrato em `app/bff/src/shared` continua
 o mesmo.
 
 ---
@@ -247,7 +247,7 @@ quebrada: quem pede HTML, recebe HTML.
 
 ## 6. O contrato compartilhado
 
-`packages/shared` define os schemas com Zod, e o tipo TypeScript é **inferido**
+`app/bff/src/shared` define os schemas com Zod, e o tipo TypeScript é **inferido**
 do schema (`z.infer`). Uma declaração produz validação em execução e tipagem em
 compilação; é impossível as duas divergirem.
 
@@ -266,30 +266,58 @@ recusou a função com `Cannot find module '.../@mochiblog/shared/src/index.ts'`
 Foram duas causas somadas:
 
 1. O Vercel empacota a função a partir dos arquivos que consegue alcançar dentro
-   da Root Directory do projeto (`app/bff`). O pacote mora em `packages/shared`,
-   fora dela, então o arquivo não entrou no pacote.
+   da Root Directory do projeto (`app/bff`). O pacote morava em `packages/shared`,
+   fora dela, então o arquivo não entrava no pacote.
 2. Mesmo se tivesse entrado, é `.ts`, e o Node não carrega `.ts`.
 
 O sintoma não ajudava: 500 em toda rota, inclusive numa que não existe, com corpo
 vazio. A explicação só aparecia no log da função.
 
-A saída foi empacotar o adaptador do Vercel com esbuild
-(`app/bff/scripts/build-function.mjs`), inlinando o pacote compartilhado. O
-arquivo `api/[...path].js` é gerado a cada build e **não** vai para o Git, para
-não existir a hipótese de alguém publicar um pacote velho por esquecer de
-reconstruir.
+A primeira tentativa foi empacotar o adaptador do Vercel com esbuild, inlinando o
+pacote compartilhado. Funcionava, mas era uma etapa de build a mais para contornar
+um problema que a própria estrutura criava.
 
-O detalhe que faz funcionar é o `alias` no empacotamento: com
-`packages: 'external'`, QUALQUER nome sem barra é tratado como pacote de npm, e o
-`@mochiblog/shared` também tem nome sem barra. Medido antes de escolher: sem o
-alias, a linha `from "@mochiblog/shared"` continuava no arquivo final.
+A solução final foi aceitar a regra do Vercel em vez de lutar contra ela: **o
+código compartilhado mudou para `app/bff/src/shared/`**, dentro da Root Directory.
+Cada consumidor o alcança por um caminho diferente:
 
-A decisão de não ter etapa de build no `packages/shared` continua valendo para o
-desenvolvimento e para o front, que só importa tipos. Quem paga o preço é o único
-consumidor de tempo de execução, e paga uma vez, num arquivo gerado.
+- O **BFF** importa `./shared/index.js` — está dentro do próprio pacote, então o
+  Vercel leva junto sem nenhum esforço.
+- O **front** importa o caminho relativo `../../bff/src/shared/index.js` com
+  `import type`. Como é só tipo, o import é apagado na compilação: o front não
+  depende desse arquivo existir no servidor dele.
 
-**Verificado:** com Node puro, sem transpilador nenhum, a função gerada serve
-`/api/health` com HTTP 200. É o formato que o Vercel executa.
+O BFF também deixou de ter etapa de build. O script `build` é só
+`tsc --noEmit`, que confere os tipos e não gera nada; quem compila a função para
+produção é o Vercel, a partir dos `.ts` que estão dentro de `app/bff`.
+
+**Verificado:** o adaptador `app/bff/api/[...path].ts` importa `../src/app.js`
+enquanto o arquivo é `app.ts`, e isso **resolve igual no Vercel**. A prova veio do
+próprio erro de boot: a função chegava a carregar as rotas e só morria lá dentro,
+ao importar uma dependência. Se a resolução do `.js` falhasse, o erro seria outro,
+mais cedo.
+
+**E o Vercel não roda o Node que você tem na máquina.** A segunda rodada de erro
+foi:
+
+```
+require() of ES Module .../htmlparser2@12.0.0/.../dist/index.js not supported
+```
+
+O `sanitize-html` é CommonJS e faz `require()` do `htmlparser2` por dentro. A
+partir da versão **2.17.2** ele passou a depender do `htmlparser2` 10+, que é ESM
+puro (`"type": "module"`). Carregar ESM de dentro de CommonJS por `require()` só é
+possível a partir do **Node 22.12**, e o ambiente do Vercel estava abaixo disso.
+
+Declarar `"engines": { "node": ">=22.12" }` **não resolveu** — o Vercel ignorou a
+exigência. A lição foi parar de depender da versão de Node de outra pessoa: o
+`sanitize-html` ficou cravado em **2.17.1**, a última que usa o `htmlparser2` 8
+(CommonJS) e portanto funciona em qualquer Node.
+
+Repare no detalhe que quase passou: `2.17.0` e `2.17.1` usam `htmlparser2 ^8`, e do
+`2.17.2` em diante já é ESM. Um `~2.17.0` não bastaria — só a versão exata serve.
+A regra que ficou: uma dependência que exige Node recente é uma dependência que
+você não controla. Prefira a versão que funciona em qualquer lugar.
 
 ---
 

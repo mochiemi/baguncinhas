@@ -256,21 +256,25 @@ o aviso de app não verificado, mas o token deixa de morrer a cada semana.
 - O `<link rel="canonical">` no HTML aponta para o domínio do Vercel, e não para
   localhost.
 
-### Se o build quebrar
+### O que já se sabe sobre o build
 
-Dois pontos frágeis, nenhum deles exercitado até hoje.
+Três pontos que valem saber antes de mexer, todos já exercitados no deploy real.
 
-- **O `packages/shared` exporta `.ts` direto**, sem etapa de build. É padrão
-  conhecido de monorepo, mas depende de o empacotador resolver. As saídas estão na
-  seção 6 de [`docs/arquitetura.md`](docs/arquitetura.md): gerar `dist` com
-  `tsup`/`tsc`, ou configurar `transpile` no bundler.
-- **O BFF importa `../src/app.js`** enquanto o arquivo é `app.ts`. Isso é o estilo
-  `NodeNext` do TypeScript e funciona local porque o `tsx` resolve. Não é certo que
-  o compilador do Vercel resolva igual.
+- **O código compartilhado mora em `app/bff/src/shared/`**, não mais em
+  `packages/shared`. O Vercel só empacota os arquivos que alcança dentro da Root
+  Directory do projeto, então um pacote fora dela não entra na função. O caminho
+  completo do problema está na seção 6 de
+  [`docs/arquitetura.md`](docs/arquitetura.md).
+- **O BFF importa `../src/app.js` enquanto o arquivo é `app.ts`.** Parecia
+  arriscado, mas está verificado que o compilador do Vercel resolve igual: a prova
+  veio de um erro de boot que só acontecia depois das rotas carregarem.
+- **Dependência que exige Node recente é armadilha.** O `sanitize-html` está
+  cravado em `2.17.1` justamente por isso — da `2.17.2` em diante ele usa um
+  `htmlparser2` ESM puro, que o Node do Vercel não consegue carregar. Não troque
+  por `^` nem faça upgrade sem ler a nota no topo de `app/bff/src/lib/html.ts`.
 
-Os dois aparecem **só no deploy**, o que é o pior lugar para descobrir. O jeito de
-antecipar é rodar `vercel build` na própria máquina, onde o ciclo de tentativa é
-de segundos.
+O jeito de antecipar qualquer um deles é rodar `vercel build` na própria máquina,
+onde o ciclo de tentativa é de segundos.
 
 ## Painel restrito
 
