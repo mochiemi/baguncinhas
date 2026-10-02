@@ -1,0 +1,829 @@
+/* ==========================================================================
+   Mochi Blog — estilos base
+   --------------------------------------------------------------------------
+   Um arquivo só, com tokens no topo. A ideia é que trocar a identidade visual
+   seja trocar valores em `:root`, não caçar cores espalhadas pelo CSS.
+   ========================================================================== */
+
+:root {
+  /* Paleta clara: papel levemente quente, nada de branco puro. Branco puro
+     cansa a vista em texto longo, e um blog é feito de texto longo. */
+  --bg: #fdf8f4;
+  --bg-soft: #f7efe8;
+  --surface: #ffffff;
+  --text: #2c2724;
+  --text-muted: #7c7069;
+  --border: #ece0d7;
+
+  --accent: #d2577a;
+  --accent-strong: #b23e60;
+  --accent-soft: #fbe8ee;
+
+  /* Erro. Existe como token porque o painel é a primeira tela que precisa
+     dizer "não deu certo", e vai haver mais. */
+  --danger: #b3261e;
+  --danger-soft: #fdecec;
+
+  --radius: 14px;
+  --radius-lg: 22px;
+  --shadow-sm: 0 1px 2px rgb(44 39 36 / 6%);
+  --shadow-md: 0 10px 30px -18px rgb(44 39 36 / 32%);
+
+  --container: 780px;
+  --space: clamp(1rem, 2.5vw, 1.5rem);
+
+  --font-body: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: ui-serif, Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17151a;
+    --bg-soft: #1e1b21;
+    --surface: #221f26;
+    --text: #efe9e5;
+    --text-muted: #a69da6;
+    --border: #322e38;
+
+    --accent: #f099af;
+    --accent-strong: #f7b8c7;
+    --accent-soft: #33222a;
+
+    --danger: #ffb4ab;
+    --danger-soft: #3a2022;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 30%);
+    --shadow-md: 0 10px 30px -18px rgb(0 0 0 / 70%);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.7;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  margin: 0 0 0.6em;
+}
+
+h1 {
+  font-size: clamp(1.75rem, 4.5vw, 2.5rem);
+}
+h2 {
+  font-size: clamp(1.35rem, 3vw, 1.7rem);
+}
+h3 {
+  font-size: 1.2rem;
+}
+
+p {
+  margin: 0 0 1.1em;
+}
+
+a {
+  color: var(--accent-strong);
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--space);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Link de pular para o conteúdo: aparece só quando recebe foco pelo teclado. */
+.skip-link {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -120%);
+  z-index: 50;
+  background: var(--accent);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 0 0 var(--radius) var(--radius);
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus {
+  transform: translate(-50%, 0);
+}
+
+/* ==========================================================================
+   Estrutura do site
+   ========================================================================== */
+
+.site {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.site__header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+.site__header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space);
+  min-height: 64px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brand__name {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.brand__tagline {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.site__nav {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.95rem;
+}
+
+.site__nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 0.35rem 0;
+  border-bottom: 2px solid transparent;
+}
+
+.site__nav a:hover {
+  color: var(--text);
+}
+
+.site__nav a.router-link-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.site__main {
+  flex: 1;
+  padding-block: clamp(1.5rem, 5vw, 3rem);
+}
+
+.site__footer {
+  border-top: 1px solid var(--border);
+  padding-block: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.site__footer p {
+  margin: 0;
+}
+
+/* ==========================================================================
+   Cabeçalho de página
+   ========================================================================== */
+
+.page-head {
+  margin-bottom: 2rem;
+}
+
+.page-head__eyebrow {
+  display: inline-block;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.page-head__lead {
+  color: var(--text-muted);
+  max-width: 55ch;
+  margin: 0;
+}
+
+/* ==========================================================================
+   Abas de assunto
+   --------------------------------------------------------------------------
+   Segunda linha do header sticky. Os rótulos vêm do blog, então a quantidade
+   é desconhecida: a linha rola na horizontal em vez de quebrar ou estourar o
+   layout. Com quatro rótulos não há rolagem nenhuma; com quinze, ainda
+   funciona.
+   ========================================================================== */
+
+.tabs {
+  padding-bottom: 0.6rem;
+}
+
+.tabs__list {
+  display: flex;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  /* Esconde a barra de rolagem: a rolagem continua funcionando por toque,
+     teclado e trackpad, só não fica um risco cinza cortando o header. */
+  scrollbar-width: none;
+}
+
+.tabs__list::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  display: inline-block;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tab:hover {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+
+/* A aba ativa precisa se distinguir por mais de uma coisa: só cor falha para
+   quem não distingue as duas tonalidades. Por isso fundo, cor e peso juntos. */
+.tab--active,
+.tab--active:hover {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Lista de posts
+   ========================================================================== */
+
+.post-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.post-card {
+  display: grid;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+@media (min-width: 620px) {
+  .post-card--with-cover {
+    grid-template-columns: 220px 1fr;
+  }
+}
+
+.post-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.post-card__cover {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 160px;
+  object-fit: cover;
+  background: var(--bg-soft);
+}
+
+.post-card__body {
+  padding: 1.25rem;
+}
+
+.post-card--with-cover .post-card__body {
+  padding-left: 0;
+}
+
+@media (max-width: 619px) {
+  .post-card--with-cover .post-card__body {
+    padding-left: 1.25rem;
+  }
+}
+
+.post-card__title {
+  font-size: 1.25rem;
+  margin-bottom: 0.35rem;
+}
+
+.post-card__title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.post-card__title a:hover {
+  color: var(--accent);
+}
+
+.post-card__excerpt {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 0.9rem;
+}
+
+.post-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tag:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.empty-state {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* ==========================================================================
+   Paginação
+   ========================================================================== */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.pagination a {
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.pagination__status {
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Post
+   ========================================================================== */
+
+.post__header {
+  margin-bottom: 1.75rem;
+}
+
+.post__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin-bottom: 1rem;
+}
+
+.post__cover {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.post__source {
+  margin-top: 3rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  text-decoration: none;
+  color: var(--text-muted);
+}
+
+.back-link:hover {
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   Conteúdo do post (HTML vindo do BFF)
+   --------------------------------------------------------------------------
+   Estas regras existem porque o HTML chega pronto do servidor e não tem classe
+   nenhuma. Sem elas, o post sai com a tipografia crua do navegador.
+   ========================================================================== */
+
+.prose {
+  font-size: 1.06rem;
+}
+
+.prose > * + * {
+  margin-top: 1.1em;
+}
+
+.prose img {
+  border-radius: var(--radius);
+  margin-block: 1.5em;
+}
+
+.prose figure {
+  margin: 1.75em 0;
+}
+
+.prose figcaption {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 0.6em;
+}
+
+.prose blockquote {
+  margin: 1.75em 0;
+  padding: 0.25em 0 0.25em 1.25em;
+  border-left: 3px solid var(--accent);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.prose code {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+}
+
+.prose pre {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+}
+
+.prose pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 2.5em 0;
+}
+
+.prose iframe {
+  max-width: 100%;
+  border-radius: var(--radius);
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  display: block;
+  overflow-x: auto;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.4em;
+}
+
+.prose li + li {
+  margin-top: 0.35em;
+}
+
+/* ==========================================================================
+   Busca
+   ========================================================================== */
+
+.search-form {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 2rem;
+}
+
+.search-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 1rem;
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.search-form input:focus-visible {
+  border-color: var(--accent);
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.7rem 1.25rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:hover {
+  background: var(--accent-strong);
+  color: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn {
+    color: #1a171d;
+  }
+  .btn:hover {
+    color: #1a171d;
+  }
+  .tag:hover {
+    color: #1a171d;
+  }
+  .skip-link {
+    color: #1a171d;
+  }
+}
+
+/* ==========================================================================
+   Painel e formulários
+   ========================================================================== */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.card + .card {
+  margin-top: 1rem;
+}
+
+.card__title {
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+
+.card__text {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+}
+
+.card__text:last-child {
+  margin-bottom: 0;
+}
+
+.card__text--muted {
+  font-size: 0.85rem;
+}
+
+.login__form {
+  display: grid;
+  gap: 1rem;
+  max-width: 420px;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field label {
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.field input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.field input:focus-visible {
+  border-color: var(--accent);
+}
+
+/* Mensagem de erro do formulário. A cor sozinha não basta para quem não
+   distingue as tonalidades, por isso o bloco tem fundo, borda e ícone textual. */
+.form-error {
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid currentColor;
+  font-size: 0.88rem;
+}
+
+.missing-list {
+  margin: 0 0 0.75rem;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+}
+
+.missing-list code {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.1em 0.4em;
+  font-size: 0.9em;
+}
+
+.admin__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+/* Campo somente leitura para copiar um valor longo. Monoespaçado e com quebra
+   de linha para o endereço inteiro caber sem rolagem lateral. */
+.copy-box {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.75rem;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  resize: vertical;
+  word-break: break-all;
+}
+
+/* Botão secundário: mesma forma, sem o peso visual do principal. Serve para as
+   ações que não são o caminho esperado da tela. */
+.btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.btn--ghost:hover {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Página de erro
+   ========================================================================== */
+
+.error-page {
+  text-align: center;
+  padding-block: clamp(3rem, 12vh, 6rem);
+}
+
+.error-page__code {
+  font-family: var(--font-heading);
+  font-size: clamp(3rem, 12vw, 5rem);
+  line-height: 1;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}

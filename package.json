@@ -1,0 +1,16 @@
+{
+  "name": "mochiblog",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:bff": "pnpm --filter @mochiblog/bff dev",
+    "dev:front": "pnpm --filter @mochiblog/front dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck"
+  }
+}
