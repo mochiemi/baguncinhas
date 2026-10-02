@@ -23,16 +23,30 @@ try {
  * vez de subir, parecer saudável e estourar 500 no primeiro post lido.
  */
 /**
- * Trata string vazia como ausente.
+ * Trata string vazia como ausente, em TODO o ambiente.
  *
- * Sem isso, `ADMIN_USER=` no .env seria uma string vazia e falharia na
- * validação, com uma mensagem confusa. Vazio é o jeito natural de dizer
- * "não configurei isso ainda".
+ * Vazio é o jeito natural de dizer "não configurei isso ainda". Enquanto o
+ * tratamento existia só nas variáveis de texto opcionais, havia um buraco: quem
+ * cola as chaves do `.env.example` no painel do provedor cria `INDEX_TTL_MS=`
+ * vazia, o `z.coerce.number()` converte '' em 0, o `.positive()` recusa, e o
+ * processo morre na inicialização. Em serverless isso vira um 500 sem explicação
+ * em toda rota, inclusive numa que não existe.
+ *
+ * A regra vale para qualquer variável, e principalmente para as que têm valor
+ * padrão: vazio significa "não configurei", então o padrão é que deve entrar.
  */
-const emptyToUndefined = (value: unknown): unknown =>
-  value === '' || value === undefined ? undefined : value
+function withoutEmptyValues(source: NodeJS.ProcessEnv): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const [key, value] of Object.entries(source)) {
+    // `trim()` junto porque um campo de painel com espaço perdido é indistinguível
+    // de um campo vazio para quem digitou, e o efeito seria o mesmo 500.
+    if (value !== undefined && value.trim() !== '') result[key] = value
+  }
+  return result
+}
 
-const optionalString = (schema: z.ZodString) => z.preprocess(emptyToUndefined, schema.optional())
+/** Marca a variável de texto como opcional. O vazio já virou ausente acima. */
+const optionalString = (schema: z.ZodString) => schema.optional()
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -122,7 +136,7 @@ const EnvSchema = z.object({
   GOOGLE_REFRESH_TOKEN: optionalString(z.string().trim().min(1)),
 })
 
-const parsed = EnvSchema.safeParse(process.env)
+const parsed = EnvSchema.safeParse(withoutEmptyValues(process.env))
 
 if (!parsed.success) {
   // Mensagem legível: campo + motivo, sem o dump gigante do ZodError.
