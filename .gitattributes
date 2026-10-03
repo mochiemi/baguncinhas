@@ -1,0 +1,20 @@
+# Fim de linha.
+#
+# O repositório guarda todo arquivo de texto em LF, e a conversão acontece na
+# hora de baixar: no Windows sai CRLF, no Linux sai LF. É assim que o servidor
+# (Vercel, Linux) recebe exatamente o que se espera de um projeto Node.
+#
+# Isto JÁ acontecia antes deste arquivo, e vale saber por quê: o Git para Windows
+# define `core.autocrlf=true` no gitconfig do sistema
+# (`C:/Program Files/Git/etc/gitconfig`), e era essa configuração que fazia o
+# `git add` avisar "LF will be replaced by CRLF". O aviso era informativo.
+#
+# O arquivo existe para a regra parar de depender da configuração de cada
+# máquina. Quem tiver `core.autocrlf=false` comitaria CRLF sem perceber, e o
+# repositório ficaria com os dois formatos misturados — aí sim um clone em Linux
+# receberia CRLF em parte dos arquivos, misturado com LF no resto.
+#
+# `text=auto` deixa o Git decidir caso a caso: arquivo de texto é normalizado,
+# binário não é encostado. Não usei `eol=lf` porque ele forçaria LF também na
+# cópia de trabalho do Windows, o que muda a sua máquina sem ganho nenhum aqui.
+* text=auto

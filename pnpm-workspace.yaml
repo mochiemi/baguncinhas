@@ -1,0 +1,24 @@
+# Um único `pnpm install` na raiz instala os dois projetos do app.
+#
+# Existia um terceiro pacote, `packages/shared`, com os tipos e schemas que o
+# front e o BFF compartilhavam. Ele foi MOVIDO para `app/bff/src/shared/`, porque
+# o Vercel não empacota arquivo que mora fora da Root Directory do projeto: a
+# função subia sem ele e morria na inicialização. O front consome os tipos de lá
+# com `import type`, que não gera dependência em tempo de execução.
+packages:
+  - 'app/*'
+
+# O pnpm bloqueia scripts de instalação por padrão. É uma boa proteção: um
+# pacote malicioso não roda código arbitrário no seu `pnpm install` só por
+# existir. Mas o esbuild precisa rodar o postinstall dele para validar o
+# binário da plataforma.
+#
+# Então liberamos UM pacote específico, em vez de desligar a proteção inteira.
+# Se um dia aparecer outro "Ignored build scripts", a pergunta certa é: eu sei
+# por que este pacote precisa rodar script? Se não souber, não libere.
+#
+# Atenção: no pnpm 11 esta configuração mora AQUI. No pnpm 9 ela ficava no
+# campo `pnpm` do package.json, e em versões intermediárias chamava
+# `onlyBuiltDependencies`. Mudou de nome e de lugar.
+allowBuilds:
+  esbuild: true
